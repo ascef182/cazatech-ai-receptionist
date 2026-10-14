@@ -1,0 +1,37 @@
+{
+  "name": "cazatech-ai-receptionist",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p .",
+    "migrate": "tsx src/db/migrate.ts",
+    "start:api": "tsx src/main-api.ts",
+    "start:worker": "tsx src/main-worker.ts",
+    "smoke": "tsx scripts/smoke.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": "true",
+  "type": "module",
+  "dependencies": {
+    "bullmq": "^6.3.14",
+    "fastify": "^5.12.7",
+    "google-auth-library": "^10.9.1",
+    "ioredis": "^5.11.1",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.4"
+  }
+}

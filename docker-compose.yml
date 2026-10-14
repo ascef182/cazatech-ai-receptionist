@@ -1,0 +1,58 @@
+# Ambiente local completo: Postgres, Redis, migrações, API e worker.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: air
+      POSTGRES_PASSWORD: air
+      POSTGRES_DB: air
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U air"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    # AOF ligado: jobs enfileirados sobrevivem a reinício do Redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+
+  migrate:
+    build: .
+    command: ["node", "dist/db/migrate.js"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://air:air@postgres:5432/air
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://air:air@postgres:5432/air
+      REDIS_URL: redis://redis:6379
+    ports: ["3000:3000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker:
+    build: .
+    command: ["node", "dist/main-worker.js"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://air:air@postgres:5432/air
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  pgdata:
