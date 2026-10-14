@@ -2,7 +2,7 @@
 
 Atendente de WhatsApp com IA para salões, barbearias e clínicas de estética: responde dúvidas com informações aprovadas pela empresa, entende áudio, transfere para a equipe e — quando autorizado — agenda, remarca e cancela no Google Calendar.
 
-**Estado:** MVP de escopo limitado, com 104 testes automatizados passando contra Postgres, Redis e ffmpeg reais. As integrações externas (Meta, Anthropic, OpenAI, ElevenLabs, Google) estão implementadas conforme a documentação oficial, mas **ainda não foram executadas com credenciais reais**. Detalhes em [`STATUS.md`](STATUS.md).
+**Estado:** MVP de escopo limitado, com 109 testes automatizados passando contra Postgres, Redis e ffmpeg reais. As integrações externas (Meta, Anthropic, OpenAI, ElevenLabs, Google) estão implementadas conforme a documentação oficial, mas **ainda não foram executadas com credenciais reais**. Detalhes em [`STATUS.md`](STATUS.md).
 
 ## Documentação
 
@@ -18,6 +18,7 @@ Atendente de WhatsApp com IA para salões, barbearias e clínicas de estética: 
 | 8 | [Segurança e privacidade](docs/08-seguranca-e-privacidade.md) — autenticação, LGPD, auditoria, incidentes |
 | 9 | [Testes](docs/09-testes.md) — cenários exigidos × testes, resultado real |
 | 10 | [Plano de implementação](docs/10-plano-de-implementacao.md) — tarefas, dependências, critérios, próximos passos |
+| 11 | [Auditoria e validação](docs/11-auditoria-e-validacao.md) — achados da auditoria técnica, correções aplicadas, ambiente local validado, checklist para credenciais reais |
 | — | [Referências](docs/referencias.md) |
 
 ## Estrutura

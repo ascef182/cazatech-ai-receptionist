@@ -1,8 +1,12 @@
 # Status — CazaTech AI Receptionist
 
-Atualizado em 13/10/2026. Lista objetiva do que existe, do que foi executado e do que falta.
+Atualizado em 14/10/2026. Lista objetiva do que existe, do que foi executado e do que falta.
 
-## Implementado **e testado** (104 testes, todos passando; Postgres, Redis e ffmpeg reais)
+## Ambiente local (Fases 1–2 de validação, ver [`docs/11`](docs/11-auditoria-e-validacao.md))
+
+Repositório agora sob controle de versão (`git init`). Ambiente local reproduzível validado do zero: Postgres 16 + Redis 7 via `docker compose`, `ffmpeg`/`ffprobe` instalados no host, `.env` de desenvolvimento (sem credenciais reais, `LLM_PROVIDER=fake`/`STT_PROVIDER=disabled`). Resultado: **109/109 testes passando** (104 anteriores + 5 novos desta auditoria) contra um banco `air_test` dedicado, `npm run typecheck` sem erros, `npm run smoke` com `SMOKE OK` (fluxo completo webhook → fila → worker → IA de demonstração → envio simulado → `status = sent`). Três correções de robustez aplicadas na auditoria técnica (classificação de erro da Meta por código, truncamento de `max_tokens` tratado como contingência, degradação parcial do `freeBusy` do Google Calendar) — detalhes e evidências em `docs/11-auditoria-e-validacao.md`. **Tudo isso continua sendo validação com fakes/dublês, não com provedores reais** — ver seção abaixo.
+
+## Implementado **e testado** (109 testes, todos passando; Postgres, Redis e ffmpeg reais)
 
 - Webhook da WhatsApp Cloud API: verificação GET, assinatura HMAC-SHA256 do corpo bruto, validação do payload, limite de taxa.
 - Persistência transacional: evento bruto, contato, conversa, mensagem, status de entrega e outbox.
