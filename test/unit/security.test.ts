@@ -4,7 +4,8 @@ import { FixedWindowLimiter } from '../../src/http/rate-limit.js';
 import { sanitizeReply, wantsHuman, wrapCustomerText } from '../../src/ai/guardrails.js';
 import { loadConfig } from '../../src/config.js';
 import { isRetryable, HttpError, PermanentError, RetryableError } from '../../src/lib/errors.js';
-import { readLimited } from '../../src/whatsapp/client.js';
+import { httpRequest } from '../../src/lib/http.js';
+import { isRateLimitedError, isTokenInvalidError, isWindowClosedError, readLimited } from '../../src/whatsapp/client.js';
 
 describe('assinatura do webhook (X-Hub-Signature-256)', () => {
   const body = Buffer.from('{"object":"whatsapp_business_account","entry":[]}');
@@ -73,6 +74,42 @@ describe('classificação de erros para nova tentativa', () => {
     expect(isRetryable(new RetryableError('x'))).toBe(true);
     expect(isRetryable(new PermanentError('x'))).toBe(false);
     expect(isRetryable(Object.assign(new Error('t'), { name: 'TimeoutError' }))).toBe(true);
+  });
+
+  it('extrai error.code/error_subcode do corpo da Graph API e usa para classificar erros da Meta', async () => {
+    const fetchImpl = (async () => new Response(JSON.stringify({ error: { message: 'Session has expired', code: 190, error_subcode: 463 } }), { status: 401 })) as any;
+    const err = await httpRequest('https://graph.facebook.com/x', {}, { service: 'whatsapp', timeoutMs: 1000, fetchImpl }).then(
+      () => null,
+      (e) => e,
+    );
+    expect(err).toBeInstanceOf(HttpError);
+    expect((err as HttpError).providerErrorCode).toBe(190);
+    expect((err as HttpError).providerErrorSubcode).toBe(463);
+    expect(isTokenInvalidError(err)).toBe(true);
+    expect(isWindowClosedError(err)).toBe(false);
+    expect(isRateLimitedError(err)).toBe(false);
+  });
+
+  it('limite de taxa da Meta (código 4/17/80007) é retryable mesmo sem HTTP 429', async () => {
+    for (const code of [4, 17, 80007]) {
+      const fetchImpl = (async () => new Response(JSON.stringify({ error: { message: 'rate limited', code } }), { status: 400 })) as any;
+      const err = await httpRequest('https://graph.facebook.com/x', {}, { service: 'whatsapp', timeoutMs: 1000, fetchImpl }).then(
+        () => null,
+        (e) => e,
+      );
+      expect(isRateLimitedError(err)).toBe(true);
+      expect(isRetryable(err)).toBe(true);
+    }
+    // o mesmo código numérico vindo de outro serviço não deve ser tratado como limite de taxa da Meta
+    const other = new HttpError('anthropic', 400, '', 4);
+    expect(isRateLimitedError(other)).toBe(false);
+    expect(isRetryable(other)).toBe(false);
+  });
+
+  it('janela de 24h fechada (código 131047) é reconhecida pelo código, com fallback por texto', () => {
+    expect(isWindowClosedError(new HttpError('whatsapp', 400, '', 131047))).toBe(true);
+    expect(isWindowClosedError(new HttpError('whatsapp', 400, 'mensagem antiga: re-engagement message'))).toBe(true);
+    expect(isWindowClosedError(new HttpError('whatsapp', 400, '', 100))).toBe(false);
   });
 });
 

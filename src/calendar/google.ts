@@ -59,8 +59,10 @@ export class GoogleCalendarProvider implements CalendarProvider {
     for (const id of calendarIds) {
       const cal = res.calendars?.[id];
       if (!cal || cal.errors?.length) {
-        // Sem informação confiável de disponibilidade: tratar como indisponível, nunca como livre.
-        throw new PermanentError(`freeBusy sem dados para a agenda (${cal?.errors?.[0]?.reason ?? 'ausente'})`, 'freebusy_error');
+        // Sem informação confiável de disponibilidade para esta agenda: tratar como ocupada durante toda
+        // a janela consultada (nunca como livre), sem derrubar a consulta das demais agendas do tenant.
+        out.set(id, [{ start: from, end: to }]);
+        continue;
       }
       out.set(id, (cal.busy ?? []).map((b) => ({ start: new Date(b.start), end: new Date(b.end) })));
     }

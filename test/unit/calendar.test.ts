@@ -55,7 +55,7 @@ describe('Google Calendar (requisições com fetch simulado)', () => {
     expect(id).toMatch(/^[a-v0-9]{5,1024}$/);
   });
 
-  it('freeBusy envia timeMin/timeMax/items e trata erro de agenda como indisponível', async () => {
+  it('freeBusy envia timeMin/timeMax/items e trata erro de agenda como indisponível, sem derrubar as demais', async () => {
     const calls: any[] = [];
     const fetchImpl = (async (url: string, init: RequestInit) => {
       calls.push({ url, body: JSON.parse(init.body as string), auth: (init.headers as any).Authorization });
@@ -64,10 +64,16 @@ describe('Google Calendar (requisições com fetch simulado)', () => {
     const g = new GoogleCalendarProvider(async () => 'tok', fetchImpl);
     const from = new Date('2026-10-12T00:00:00Z');
     const to = new Date('2026-10-13T00:00:00Z');
-    const r = await g.busy(['a'], from, to);
+    const r = await g.busy(['a', 'b'], from, to);
     expect(r.get('a')).toHaveLength(1);
-    expect(calls[0]).toMatchObject({ url: 'https://www.googleapis.com/calendar/v3/freeBusy', auth: 'Bearer tok', body: { timeMin: from.toISOString(), items: [{ id: 'a' }] } });
-    await expect(g.busy(['b'], from, to)).rejects.toThrow(/freeBusy/);
+    // agenda com erro: tratada como ocupada durante toda a janela (nunca como livre), sem lançar exceção
+    // e sem afetar a resposta da agenda 'a', que funcionou normalmente.
+    expect(r.get('b')).toEqual([{ start: from, end: to }]);
+    expect(calls[0]).toMatchObject({
+      url: 'https://www.googleapis.com/calendar/v3/freeBusy',
+      auth: 'Bearer tok',
+      body: { timeMin: from.toISOString(), items: [{ id: 'a' }, { id: 'b' }] },
+    });
   });
 
   it('criação repetida com o mesmo id (409) é tratada como sucesso se o evento existe', async () => {

@@ -17,7 +17,7 @@ import type { Synthesizer } from '../audio/tts.js';
 import type { HandoffNotifier } from '../handoff/notifier.js';
 import { loadTenantContext, type TenantContext } from '../tenant/context.js';
 import type { WhatsAppClient } from '../whatsapp/client.js';
-import { isWindowClosedError } from '../whatsapp/client.js';
+import { isTokenInvalidError, isWindowClosedError } from '../whatsapp/client.js';
 
 export interface ProcessorConfig {
   DATA_ENCRYPTION_KEY: string;
@@ -349,7 +349,11 @@ async function deliver(d: ProcessorDeps, t: TenantContext, to: string, m: { id: 
     await d.db.query(`UPDATE messages SET status = 'sent', wa_message_id = $2 WHERE id = $1`, [m.id, wamid]);
   } catch (err) {
     if (isRetryable(err)) throw err; // permanece 'pending'; o próximo processamento reenvia
-    const code = isWindowClosedError(err) ? 'outside_customer_service_window' : (err as Error).message.slice(0, 200);
+    const code = isWindowClosedError(err)
+      ? 'outside_customer_service_window'
+      : isTokenInvalidError(err)
+        ? 'whatsapp_token_invalid'
+        : (err as Error).message.slice(0, 200);
     await d.db.query(`UPDATE messages SET status = 'failed', error = $2 WHERE id = $1`, [m.id, code]);
     d.log.error({ messageId: m.id, err: code }, 'falha permanente ao enviar resposta');
   }

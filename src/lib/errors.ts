@@ -19,12 +19,19 @@ export class HttpError extends Error {
     public readonly service: string,
     public readonly status: number,
     public readonly bodySnippet: string,
+    /** código numérico de `error.code` (formato Graph API da Meta), quando o corpo é um JSON reconhecível */
+    public readonly providerErrorCode?: number,
+    public readonly providerErrorSubcode?: number,
   ) {
     super(`${service} respondeu HTTP ${status}`);
     this.name = 'HttpError';
   }
   get retryable(): boolean {
-    return this.status === 408 || this.status === 429 || this.status >= 500;
+    if (this.status === 408 || this.status === 429 || this.status >= 500) return true;
+    // A Meta nem sempre usa 429 para limite de taxa (ex.: código 4 "Application request limit reached",
+    // 17 "User request limit reached", 80007 "WhatsApp Business API rate limit"); esses chegam como 4xx.
+    if (this.service === 'whatsapp' && (this.providerErrorCode === 4 || this.providerErrorCode === 17 || this.providerErrorCode === 80007)) return true;
+    return false;
   }
 }
 

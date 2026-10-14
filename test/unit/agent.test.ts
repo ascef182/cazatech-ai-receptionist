@@ -121,6 +121,19 @@ describe('laço do agente', () => {
     expect(r.outcome).toBe('limit_time');
   });
 
+  it('resposta truncada por max_tokens durante tool_use vira erro em vez de executar argumento incompleto', async () => {
+    const llm = new ScriptedLlm([{ ...llmTool('propose_booking', { slot_code: 'abc12' }), stopReason: 'max_tokens' }]);
+    const r = await runAgent({ llm, system: 's', history: [{ role: 'user', content: 'quero agendar' }], bookingEnabled: true, tools: tools(), limits, log: silentLog });
+    expect(r.outcome).toBe('error');
+    expect(r.toolCalls).toEqual([]); // a ferramenta nunca chega a ser executada
+  });
+
+  it('texto truncado por max_tokens sem chamada de ferramenta ainda é devolvido como resposta', async () => {
+    const llm = new ScriptedLlm([{ ...llmText('Claro, o horário disponível é'), stopReason: 'max_tokens' }]);
+    const r = await runAgent({ llm, system: 's', history: [{ role: 'user', content: 'oi' }], bookingEnabled: true, tools: tools(), limits, log: silentLog });
+    expect(r.outcome).toBe('reply');
+  });
+
   it('handoff pela ferramenta encerra com outcome handoff', async () => {
     let called = '';
     const llm = new ScriptedLlm([llmTool('handoff_to_human', { reason: 'complaint' }), llmText('Vou chamar a equipe.')]);

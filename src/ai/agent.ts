@@ -74,6 +74,14 @@ export async function runAgent(params: {
         .join('\n')
         .trim();
 
+      if (res.stopReason === 'max_tokens' && toolUses.length > 0) {
+        // Resposta truncada pelo limite de tokens no meio de uma chamada de ferramenta: o JSON de
+        // entrada pode estar incompleto. Nunca executar uma ferramenta (possivelmente de agenda)
+        // com argumentos truncados — melhor contingência do que um efeito colateral indevido.
+        log.warn({ iteration: i }, 'resposta truncada por max_tokens com chamada de ferramenta pendente');
+        return result('error', null, i, 'resposta truncada por limite de tokens durante chamada de ferramenta');
+      }
+
       if (toolUses.length === 0) {
         if (handoff) return result('handoff', text ? sanitizeReply(text) : null, i);
         if (!text) return result('error', null, i, 'resposta vazia do modelo');

@@ -162,5 +162,22 @@ export async function readLimited(res: Response, maxBytes: number): Promise<Buff
 
 export function isWindowClosedError(err: unknown): boolean {
   // Fora da janela de atendimento a Meta recusa mensagens livres; só templates aprovados passam.
-  return err instanceof HttpError && err.status === 400 && /131047|re-engagement/i.test(err.bodySnippet);
+  if (!(err instanceof HttpError) || err.status !== 400) return false;
+  if (err.providerErrorCode !== undefined) return err.providerErrorCode === 131047;
+  // Retrocompatibilidade: corpo que não pôde ser interpretado como JSON do Graph API.
+  return /131047|re-engagement/i.test(err.bodySnippet);
+}
+
+/** Token de acesso expirado ou revogado (código 190 da Graph API). */
+export function isTokenInvalidError(err: unknown): boolean {
+  return err instanceof HttpError && err.providerErrorCode === 190;
+}
+
+/** Limite de taxa da Meta (aplicativo ou conta do WhatsApp Business), ainda que não venha como HTTP 429. */
+export function isRateLimitedError(err: unknown): boolean {
+  return (
+    err instanceof HttpError &&
+    err.service === 'whatsapp' &&
+    (err.providerErrorCode === 4 || err.providerErrorCode === 17 || err.providerErrorCode === 80007)
+  );
 }
